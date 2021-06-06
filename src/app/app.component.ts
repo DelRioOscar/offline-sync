@@ -35,9 +35,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   listenData(): void {
-    this.requestService.getSyncedData().subscribe(response => {
-      console.log(response);
-    })
+    this.requestService.getSyncedData()
+      .pipe(takeUntil(this.subject$))
+      .subscribe(response => {
+        console.log(response);
+      })
   }
 
   enableSync(): void {
@@ -50,7 +52,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-
+    this.subject$.next();
+    this.subject$.complete();
   }
 
   destroyListener() {
