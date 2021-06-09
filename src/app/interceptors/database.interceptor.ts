@@ -2,19 +2,20 @@ import { Injectable } from '@angular/core';
 import { HttpInterceptor, HttpEvent, HttpHandler, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators'
-import { NgxIndexedDBService } from 'ngx-indexed-db';
+import { SyncService } from '../shared/services/sync.service';
+
 
 @Injectable()
 export class DatabaseInterceptor implements HttpInterceptor {
 
     onlyMethods = ['POST', 'PUT', 'PATCH']
 
-    constructor(private dbService: NgxIndexedDBService) { }
+    constructor(private syncService: SyncService) { }
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         return next.handle(req).pipe(
             catchError((e: HttpErrorResponse) => {
-                if (e instanceof HttpErrorResponse && e.status === 0) {
+                if (e instanceof HttpErrorResponse && !this.syncService.hasNetworkConnection) {
                     // Comprobar si el metodo http cumple con los métodos declarado arriba
                     const supportedMethod = this.onlyMethods.includes(req.method)
                     if (supportedMethod) {
@@ -26,7 +27,7 @@ export class DatabaseInterceptor implements HttpInterceptor {
                         const body = req.body;
 
                         // Agregamos los datos a la base de datos local del navegador
-                        this.dbService.add('dataToPost', { apiUrl, body, method: req.method });
+                        this.syncService.saveDataToDb(apiUrl, req.method, body);
                     }
 
                 }

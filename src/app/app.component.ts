@@ -1,9 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { UsersService } from './services/users.service';
 import { Pagination } from './shared/interfaces/pagination.interface';
+import { RequestProcess } from './shared/interfaces/request-process.interface';
 import { UserResponse } from './shared/interfaces/user-response.interface';
 import { SyncService } from './shared/services/sync.service';
 
@@ -17,10 +18,16 @@ export class AppComponent implements OnInit, OnDestroy {
   users: Pagination<UserResponse>;
   formUser: FormGroup;
 
+  connectionStatus$: Observable<boolean>;
+  runningSync$: Observable<boolean>;
+
+  requestProcess: RequestProcess;
+  total = 0;
+
   constructor(
     private usersService: UsersService,
     private fb: FormBuilder,
-    private requestService: SyncService
+    private syncService: SyncService
   ) { }
 
   subject$ = new Subject();
@@ -31,24 +38,35 @@ export class AppComponent implements OnInit, OnDestroy {
     this.getUsers();
     this.enableSync();
     this.listenData();
-
+    this.listenConnectionStatus();
+    this.listenRunningSync();
   }
 
+  listenRunningSync(): void {
+    this.runningSync$ = this.syncService.getRunningSync();
+  }
+
+  listenConnectionStatus() {
+    this.connectionStatus$ = this.syncService.getListenerConnection();
+  }
+
+
   listenData(): void {
-    this.requestService.getSyncedData()
+    this.syncService.getSyncedData()
       .pipe(takeUntil(this.subject$))
       .subscribe(response => {
-        console.log(response);
+        this.requestProcess = response;
+        this.total = (this.requestProcess.success + this.requestProcess.failed) * 100 / this.requestProcess.total;
       })
   }
 
   enableSync(): void {
     this.sync = true;
-    this.requestService.enableSync();
+    this.syncService.enableSync();
   }
 
   syncManual() {
-    this.requestService.runSync();
+    this.syncService.runSync();
   }
 
   ngOnDestroy(): void {
@@ -57,8 +75,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   destroyListener() {
+    this.syncService.disabledSync();
     this.sync = false;
-    this.requestService.destroySync();
   }
 
   createFormUser(): void {

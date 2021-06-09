@@ -1,8 +1,25 @@
 <div class="container">
 
     <h1>Lista de usuarios</h1>
-    <div class="my-5 d-flex justify-content-between">
 
+    <ng-container *ngIf="(this.connectionStatus$ | async); else notNetwork">
+        <span class="badge bg-success">Conectado a Internet</span>
+    </ng-container>
+    <ng-template #notNetwork>
+        <span class="badge bg-danger">Sin conexión</span>
+    </ng-template>
+
+
+    <div class="mt-3" *ngIf="this.runningSync$ | async">
+        Sincronizando datos...
+        <div class="progress">
+            <div class="progress-bar bg-success" role="progressbar" [style.width]="total + '%'" aria-valuenow="25"
+                aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+
+
+    <div class="my-5 d-flex justify-content-between">
         <div>
             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
                 Nuevo Usuario
